@@ -36,7 +36,7 @@ class MNISTModel(NN.Module):   ### This creates a class for our specific NN, inh
         x = x.view(-1, 28 * 28)  # Flatten input from (batch, 1, 28, 28) -> (batch, 784), applies to the tensor prepared above in the dataloader
         x = F.relu(self.fc1(x))  # Activation function (ReLU), no negatives, play with leaky ReLU later
         x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
+        x = F.relu(self.fc3(x))  ### I think this should have been maybe softmax instead, as the default probability thig, though I dont actually understand why that is better over another normilization function, ultimately we're trying to hit the axium of probability that they sun to 1
         x = self.fc4(x)  # No activation here, end of the road ("cross-entropy expects raw logits" - which are produced here, the logits will be converted to probabilities later by the cross-entropy function during training and softmax during training and inference)
         return x
     
@@ -99,3 +99,5 @@ print(f"Test Accuracy: {accuracy:.2f}%")
 
 torch.save(model.state_dict(), "mnist_model_one_weights.pth")
 torch.save(model, "mnist_full_model.pth")
+
+
