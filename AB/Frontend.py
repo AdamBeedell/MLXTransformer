@@ -114,7 +114,29 @@ transform = transforms.Compose([   ### same as during training
 st.title("MNIST Digit Classifier")
 
 
+def validate_canvas(image_array, avg_density=0.05, threshold=0.9):
+    """
+    Checks if the canvas drawing is too dense or touches the edge.
+    """
+    img = Image.fromarray(image_array.astype("uint8")).convert("L")
+    tensor = transform(img).unsqueeze(0)  # (1, 28, 28)
 
+    density = (tensor > threshold).float().mean().item()
+
+    edges = torch.cat([
+        tensor[..., 0, :],    # top
+        tensor[..., -1, :],   # bottom
+        tensor[..., :, 0],    # left
+        tensor[..., :, -1]    # right
+    ], dim=-1)
+    edge_touched = (edges > threshold).any().item()
+
+    if density > avg_density * 1.5 or edge_touched:
+        st.markdown("## 😡 Whoa there!")
+        st.error("Too much ink or touching the edge. Please try again.")
+        st.snow()
+        return False
+    return True
 
 
 
@@ -142,29 +164,33 @@ with col2:
 
 # Process the drawn image
 if canvas_result.image_data is not None:
-    image = Image.fromarray(canvas_result.image_data.astype("uint8"))  # Convert to PIL image
-    image = image.convert("L")  # Convert to grayscale
     
-    #st.image(image, caption="Your Drawing", width=150)   ### unhash this to show the drawing back
+    if validate_canvas(canvas_result.image_data, avg_density=0.048):  # replace with your real avg
+    # proceed with prediction
 
-    # Apply the same transformation as training
-    image = transform(image)
-    image = image.unsqueeze(0)  # Add batch dimension
-    image = image.to(device)
+        image = Image.fromarray(canvas_result.image_data.astype("uint8"))  # Convert to PIL image
+        image = image.convert("L")  # Convert to grayscale
+        
+        #st.image(image, caption="Your Drawing", width=150)   ### unhash this to show the drawing back
 
-    #Do inference
-    with torch.no_grad():
-        output = model(image)
-        probabilities = F.softmax(output, dim=1)  # Convert logits to probabilities
-        predicted_digit = torch.argmax(probabilities).item()
-        confidence = torch.max(probabilities).item()
+        # Apply the same transformation as training
+        image = transform(image)
+        image = image.unsqueeze(0)  # Add batch dimension
+        image = image.to(device)
 
-    # Display results
-    st.write(f"**Prediction:** {predicted_digit}")
-    st.write(f"**Confidence:** {confidence:.2%}")
+        #Do inference
+        with torch.no_grad():
+            output = model(image)
+            probabilities = F.softmax(output, dim=1)  # Convert logits to probabilities
+            predicted_digit = torch.argmax(probabilities).item()
+            confidence = torch.max(probabilities).item()
 
-    #log it
-    #logthelogs(predicted_digit, confidence, actual) ### disabled for now
+        # Display results
+        st.write(f"**Prediction:** {predicted_digit}")
+        st.write(f"**Confidence:** {confidence:.2%}")
+
+        #log it
+        #logthelogs(predicted_digit, confidence, actual) ### disabled for now
 
 
 # Upload method
